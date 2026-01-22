@@ -1,8 +1,8 @@
-import createContextHook from "@nkzw/create-context-hook";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
-import type { Client, ClientInput, SalesSummary } from "@/types/client";
+import type { ClientInput, SalesSummary } from "@/app/types/client";
 import { ClientService } from "@/services/api";
+import createContextHook from "@nkzw/create-context-hook";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 export const [SalesProvider, useSales] = createContextHook(() => {
   const queryClient = useQueryClient();
@@ -38,11 +38,14 @@ export const [SalesProvider, useSales] = createContextHook(() => {
     const clients = clientsQuery.data || [];
     return {
       totalVendas: clients.length,
-      vendasInternet: clients.filter((c) => c.tipoServico === "Internet Fibra").length,
-      vendasTV: clients.filter((c) => c.tipoServico === "TV por Assinatura").length,
+      vendasInternet: clients.filter((c) => c.tipoServico === "Internet Fibra")
+        .length,
+      vendasTV: clients.filter((c) => c.tipoServico === "TV por Assinatura")
+        .length,
       vendasCelular: clients.filter(
         (c) =>
-          c.tipoServico === "Celular Controle" || c.tipoServico === "Celular Pós-Pago"
+          c.tipoServico === "Celular Controle" ||
+          c.tipoServico === "Celular Pós-Pago",
       ).length,
       vendasCombo: clients.filter((c) => c.tipoServico === "Combo").length,
     };

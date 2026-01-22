@@ -1,20 +1,75 @@
-import React from "react";
+import type { Client } from "@/app/types/client";
+import Colors from "@/constants/colors";
+import { useSales } from "@/contexts/SalesContext";
+import { ExcelExportService } from "@/services/excelExport";
+import { Stack } from "expo-router";
 import {
+  Calendar,
+  FileDown,
+  MapPin,
+  Package,
+  Phone,
+  Trash2,
+} from "lucide-react-native";
+import React, { useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Modal,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
-  ScrollView,
   TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Platform,
+  View,
 } from "react-native";
-import { FileDown, Trash2, Calendar, Phone, MapPin, Package } from "lucide-react-native";
-import { useSales } from "@/contexts/SalesContext";
-import Colors from "@/constants/colors";
-import type { Client } from "@/types/client";
-import { Stack } from "expo-router";
-import * as XLSX from "xlsx";
+
+interface DeleteConfirmProps {
+  visible: boolean;
+  clientName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function DeleteConfirmDialog({
+  visible,
+  clientName,
+  onConfirm,
+  onCancel,
+}: DeleteConfirmProps) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onCancel}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.dialog}>
+          <Text style={styles.dialogTitle}>Confirmar Exclusão</Text>
+          <Text style={styles.dialogMessage}>
+            Deseja realmente excluir o cliente {clientName}?
+          </Text>
+
+          <View style={styles.dialogButtons}>
+            <TouchableOpacity
+              style={[styles.dialogButton, styles.cancelButton]}
+              onPress={onCancel}
+            >
+              <Text style={styles.cancelText}>Cancelar</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.dialogButton, styles.confirmButton]}
+              onPress={onConfirm}
+            >
+              <Text style={styles.confirmText}>Excluir</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 interface ClientCardProps {
   client: Client;
@@ -22,19 +77,12 @@ interface ClientCardProps {
 }
 
 function ClientCard({ client, onDelete }: ClientCardProps) {
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const handleDelete = () => {
-    Alert.alert(
-      "Confirmar Exclusão",
-      `Deseja realmente excluir o cliente ${client.nomeCompleto}?`,
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Excluir",
-          style: "destructive",
-          onPress: () => onDelete(client.id),
-        },
-      ]
-    );
+    console.log("🟢 [CARD] Confirmação aceita, chamando onDelete");
+    setShowConfirm(false);
+    onDelete(client.id);
   };
 
   const formatDate = (isoDate: string) => {
@@ -43,69 +91,72 @@ function ClientCard({ client, onDelete }: ClientCardProps) {
   };
 
   return (
-    <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardName}>{client.nomeCompleto}</Text>
-        <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-          <Trash2 size={20} color={Colors.light.error} />
-        </TouchableOpacity>
+    <>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardName}>{client.nomeCompleto}</Text>
+          <TouchableOpacity
+            onPress={() => setShowConfirm(true)}
+            style={styles.deleteButton}
+          >
+            <Trash2 size={20} color={Colors.light.error} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.cardContent}>
+          <View style={styles.infoRow}>
+            <MapPin size={16} color={Colors.light.secondary} />
+            <Text style={styles.infoText}>{client.endereco}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Phone size={16} color={Colors.light.secondary} />
+            <Text style={styles.infoText}>{client.telefone}</Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Package size={16} color={Colors.light.primary} />
+            <Text style={[styles.infoText, styles.serviceText]}>
+              {client.tipoServico}
+            </Text>
+          </View>
+
+          <View style={styles.infoRow}>
+            <Calendar size={16} color={Colors.light.secondary} />
+            <Text style={styles.infoText}>
+              Cadastrado em {formatDate(client.dataCadastro)}
+            </Text>
+          </View>
+        </View>
       </View>
 
-      <View style={styles.cardContent}>
-        <View style={styles.infoRow}>
-          <MapPin size={16} color={Colors.light.secondary} />
-          <Text style={styles.infoText}>{client.endereco}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Phone size={16} color={Colors.light.secondary} />
-          <Text style={styles.infoText}>{client.telefone}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Package size={16} color={Colors.light.primary} />
-          <Text style={[styles.infoText, styles.serviceText]}>{client.tipoServico}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Calendar size={16} color={Colors.light.secondary} />
-          <Text style={styles.infoText}>Cadastrado em {formatDate(client.dataCadastro)}</Text>
-        </View>
-      </View>
-    </View>
+      <DeleteConfirmDialog
+        visible={showConfirm}
+        clientName={client.nomeCompleto}
+        onConfirm={handleDelete}
+        onCancel={() => setShowConfirm(false)}
+      />
+    </>
   );
 }
 
 export default function SalesListScreen() {
   const { clients, isLoading, deleteClient, isDeleting } = useSales();
 
-  const exportToExcel = () => {
+  const handleDeleteClient = (id: string) => {
+    console.log("🟡 [SALES] handleDeleteClient chamado com ID:", id);
+    deleteClient(id);
+  };
+
+  const exportToExcel = async () => {
     if (clients.length === 0) {
       Alert.alert("Aviso", "Não há clientes para exportar");
       return;
     }
 
     try {
-      const data = clients.map((client) => ({
-        "Nome Completo": client.nomeCompleto,
-        "Endereço": client.endereco,
-        "Telefone": client.telefone,
-        "Tipo de Serviço": client.tipoServico,
-        "Data de Cadastro": new Date(client.dataCadastro).toLocaleDateString("pt-BR"),
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Clientes");
-
-      if (Platform.OS === "web") {
-        XLSX.writeFile(wb, `clientes_claro_${new Date().getTime()}.xlsx`);
-        Alert.alert("Sucesso", "Relatório exportado com sucesso!");
-      } else {
-        const wbout = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
-        Alert.alert("Info", "Exportação em desenvolvimento para mobile");
-        console.log("Excel base64:", wbout);
-      }
+      await ExcelExportService.exportClients(clients);
+      Alert.alert("Sucesso", "Relatório exportado com sucesso!");
     } catch (error) {
       console.error("Erro ao exportar:", error);
       Alert.alert("Erro", "Não foi possível exportar o relatório");
@@ -132,7 +183,8 @@ export default function SalesListScreen() {
           <View>
             <Text style={styles.headerTitle}>Clientes Cadastrados</Text>
             <Text style={styles.headerSubtitle}>
-              {clients.length} {clients.length === 1 ? "cliente" : "clientes"} no sistema
+              {clients.length} {clients.length === 1 ? "cliente" : "clientes"}{" "}
+              no sistema
             </Text>
           </View>
           <TouchableOpacity
@@ -160,7 +212,11 @@ export default function SalesListScreen() {
             showsVerticalScrollIndicator={false}
           >
             {clients.map((client) => (
-              <ClientCard key={client.id} client={client} onDelete={deleteClient} />
+              <ClientCard
+                key={client.id}
+                client={client}
+                onDelete={handleDeleteClient}
+              />
             ))}
           </ScrollView>
         )}
@@ -183,8 +239,8 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: Colors.light.background,
   },
   loadingText: {
@@ -193,9 +249,9 @@ const styles = StyleSheet.create({
     color: Colors.light.secondary,
   },
   header: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,
@@ -203,7 +259,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: "bold" as const,
+    fontWeight: "bold",
     color: Colors.light.text,
   },
   headerSubtitle: {
@@ -212,8 +268,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   exportButton: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.light.primary,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -223,7 +279,7 @@ const styles = StyleSheet.create({
   exportButtonText: {
     color: Colors.light.card,
     fontSize: 14,
-    fontWeight: "600" as const,
+    fontWeight: "600",
   },
   list: {
     flex: 1,
@@ -243,14 +299,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   cardHeader: {
-    flexDirection: "row" as const,
-    justifyContent: "space-between" as const,
-    alignItems: "center" as const,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   cardName: {
     fontSize: 18,
-    fontWeight: "bold" as const,
+    fontWeight: "bold",
     color: Colors.light.text,
     flex: 1,
   },
@@ -261,8 +317,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   infoRow: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   infoText: {
@@ -272,17 +328,17 @@ const styles = StyleSheet.create({
   },
   serviceText: {
     color: Colors.light.primary,
-    fontWeight: "600" as const,
+    fontWeight: "600",
   },
   emptyContainer: {
     flex: 1,
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
+    justifyContent: "center",
+    alignItems: "center",
     padding: 32,
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: "bold" as const,
+    fontWeight: "bold",
     color: Colors.light.text,
     marginTop: 16,
     marginBottom: 8,
@@ -290,22 +346,80 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     fontSize: 14,
     color: Colors.light.secondary,
-    textAlign: "center" as const,
+    textAlign: "center",
   },
   deletingOverlay: {
-    position: "absolute" as const,
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
+    justifyContent: "center",
+    alignItems: "center",
   },
   deletingText: {
     marginTop: 12,
     fontSize: 16,
     color: Colors.light.card,
-    fontWeight: "600" as const,
+    fontWeight: "600",
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  dialog: {
+    backgroundColor: Colors.light.card,
+    borderRadius: 12,
+    padding: 24,
+    width: "100%",
+    maxWidth: 400,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  dialogTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: Colors.light.text,
+    marginBottom: 12,
+  },
+  dialogMessage: {
+    fontSize: 16,
+    color: Colors.light.secondary,
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  dialogButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  dialogButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: Colors.light.lightGray,
+  },
+  confirmButton: {
+    backgroundColor: Colors.light.error,
+  },
+  cancelText: {
+    color: Colors.light.text,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  confirmText: {
+    color: Colors.light.card,
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

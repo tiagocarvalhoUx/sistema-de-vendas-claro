@@ -1,18 +1,18 @@
+import type { ServiceType } from "@/app/types/client";
+import Colors from "@/constants/colors";
+import { useSales } from "@/contexts/SalesContext";
+import { Stack } from "expo-router";
+import { Check, UserPlus } from "lucide-react-native";
 import React, { useState } from "react";
 import {
+  Alert,
+  ScrollView,
   StyleSheet,
   Text,
-  View,
-  ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
+  View,
 } from "react-native";
-import { UserPlus, Check } from "lucide-react-native";
-import { useSales } from "@/contexts/SalesContext";
-import Colors from "@/constants/colors";
-import type { ServiceType } from "@/types/client";
-import { Stack } from "expo-router";
 
 const SERVICE_OPTIONS: ServiceType[] = [
   "Internet Fibra",
@@ -75,14 +75,17 @@ export default function RegisterScreen() {
         onError: () => {
           Alert.alert("Erro", "Não foi possível cadastrar o cliente");
         },
-      }
+      },
     );
   };
 
   return (
     <>
       <Stack.Screen options={{ title: "Cadastro de Cliente" }} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+      >
         <View style={styles.header}>
           <View style={styles.iconContainer}>
             <UserPlus size={32} color={Colors.light.primary} />
@@ -164,7 +167,10 @@ export default function RegisterScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.submitButton, isCreating && styles.submitButtonDisabled]}
+            style={[
+              styles.submitButton,
+              isCreating && styles.submitButtonDisabled,
+            ]}
             onPress={handleSubmit}
             disabled={isCreating}
             activeOpacity={0.8}

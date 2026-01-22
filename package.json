@@ -9,7 +9,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "build": "expo export --platform web"
+    "build": "expo export --platform web",
+    "android": "EXPO_ANDROID_EMULATOR_TIMEOUT=600000 expo start --android"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -29,6 +30,7 @@
     "expo": "~54.0.31",
     "expo-blur": "~15.0.8",
     "expo-constants": "~18.0.13",
+    "expo-file-system": "~19.0.21",
     "expo-font": "~14.0.11",
     "expo-haptics": "~15.0.8",
     "expo-image": "~3.0.11",
@@ -37,6 +39,7 @@
     "expo-linking": "~8.0.11",
     "expo-location": "~19.0.8",
     "expo-router": "~6.0.21",
+    "expo-sharing": "~14.0.8",
     "expo-splash-screen": "~31.0.13",
     "expo-status-bar": "~3.0.9",
     "expo-symbols": "~1.0.8",

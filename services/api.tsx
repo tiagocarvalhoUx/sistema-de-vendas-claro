@@ -1,5 +1,5 @@
+import type { Client, ClientInput } from "@/app/types/client";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import type { Client, ClientInput } from "@/types/client";
 
 const STORAGE_KEY = "@claro_clients";
 
@@ -52,11 +52,24 @@ export const ClientService = {
 
   async deleteClient(id: string): Promise<void> {
     try {
+      console.log("🔴 [DELETE] Iniciando exclusão do cliente ID:", id);
+      
       const clients = await this.getAllClients();
+      console.log("🔴 [DELETE] Total de clientes antes:", clients.length);
+      console.log("🔴 [DELETE] IDs dos clientes:", clients.map(c => c.id));
+      
       const filtered = clients.filter((c) => c.id !== id);
+      console.log("🔴 [DELETE] Total de clientes depois:", filtered.length);
+      
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+      console.log("🔴 [DELETE] Cliente excluído com sucesso!");
+      
+      // Verificar se realmente salvou
+      const verification = await this.getAllClients();
+      console.log("🔴 [DELETE] Verificação - Total atual:", verification.length);
+      
     } catch (error) {
-      console.error("Erro ao deletar cliente:", error);
+      console.error("🔴 [DELETE] Erro ao deletar cliente:", error);
       throw error;
     }
   },
